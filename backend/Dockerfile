@@ -1,26 +1,20 @@
+# Imagen base
 FROM python:3.11-slim
 
+# Carpeta dentro del contenedor
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copiar requirements
-COPY requirements.txt .
+COPY backend/requirements.txt /app/requirements.txt
 
-# Instalar dependencias de Python
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalar dependencias
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copiar código de la aplicación
-COPY . .
+# Copiar todo el backend (incluyendo templates)
+COPY backend /app
 
-# Exponer puerto
+# Exponer el puerto
 EXPOSE 8000
 
-# Comando para iniciar la aplicación
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-### **3. docker-compose.yml** (en la raíz, junto a backend/)
+# Comando de ejecución
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
