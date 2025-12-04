@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # 🗄️ Configuración de base de datos
 # Cambia user/password/host/puerto según tu entorno (Docker Compose o local).
 # ========================================
-DATABASE_URL = "postgresql://user:password@db:5432/subastas_db"
+DATABASE_URL = "postgresql://user:password@subastas_db:5432/subastas_db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
