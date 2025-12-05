@@ -18,6 +18,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ---------- FRONTEND ----------
+@app.get("/perfil", response_class=HTMLResponse)
+def perfil_page(request: Request):
+    return templates.TemplateResponse("perfil.html", {"request": request})
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -53,6 +58,11 @@ def api_listar_subastas():
 def api_detalle(subasta_id: int):
     db = SessionLocal()
     return crud.obtener_subasta(db, subasta_id)
+
+@app.post("/api/subastas")
+def api_crear_subasta(data: dict):
+    db = SessionLocal()
+    return crud.crear_subasta(db, data)
 
 @app.post("/api/pujas")
 def api_puja(data: dict):
