@@ -1,44 +1,170 @@
-<!-- index.html -->
 {% extends "base.html" %}
 {% block title %}Inicio{% endblock %}
 
-
 {% block content %}
-<h1 class="text-4xl font-bold mb-6 neon">Subastas Activas</h1>
 
+<!-- Sección: Mis Pujas Activas -->
+<div class="mb-12">
+  <h1 class="text-4xl font-bold mb-6 neon">Mis Pujas Activas</h1>
+  <div id="mis-pujas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+</div>
 
+<!-- Sección: Todas las Subastas -->
+<h1 class="text-4xl font-bold mb-6 neon">Todas las Subastas Activas</h1>
 <div id="lista-subastas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
 
-
 <script>
+let contadores = {};
+let usuarioActual = null;
+
+/* Obtener usuario actual */
+async function obtenerUsuarioActual() {
+  const res = await fetch('/api/usuario/actual');
+  const data = await res.json();
+  if (!data.error) {
+    usuarioActual = data;
+    cargarMisPujas();
+  }
+}
+
+/* Función para calcular y mostrar el contador */
+function iniciarContador(subastaId, fechaFin) {
+  const elementoId = `contador-${subastaId}`;
+  
+  contadores[subastaId] = setInterval(() => {
+    const ahora = new Date().getTime();
+    const fin = new Date(fechaFin).getTime();
+    const diferencia = fin - ahora;
+
+    if (diferencia <= 0) {
+      clearInterval(contadores[subastaId]);
+      const elem = document.getElementById(elementoId);
+      if (elem) {
+        elem.innerHTML = '<span class="text-red-400 font-bold">¡SUBASTA FINALIZADA!</span>';
+      }
+      return;
+    }
+
+    const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+    const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
+
+    const elem = document.getElementById(elementoId);
+    if (elem) {
+      elem.innerHTML = `<span class="text-cyan-300 font-mono">${dias}d ${horas}h ${minutos}m ${segundos}s</span>`;
+    }
+  }, 1000);
+}
+
+/* Cargar mis pujas */
+async function cargarMisPujas() {
+  if (!usuarioActual) return;
+
+  const res = await fetch(`/api/usuario/${usuarioActual.id}/pujas`);
+  const pujas = await res.json();
+
+  const cont = document.getElementById('mis-pujas');
+  cont.innerHTML = '';
+
+  if (pujas.length === 0) {
+    cont.innerHTML = `<p class='text-gray-300 col-span-full'>No tienes pujas activas aún. ¡Empieza a pujar en las subastas de abajo!</p>`;
+    return;
+  }
+
+  /* Agrupar pujas por subasta (quedarnos con la más alta de cada una) */
+  const pujasPorSubasta = {};
+  pujas.forEach(p => {
+    const sid = p.subasta.id;
+    if (!pujasPorSubasta[sid] || p.monto > pujasPorSubasta[sid].monto) {
+      pujasPorSubasta[sid] = p;
+    }
+  });
+
+  Object.values(pujasPorSubasta).forEach(p => {
+    const s = p.subasta;
+    const esGanando = p.monto >= s.precio_actual;
+    const estadoClase = esGanando ? 'text-green-400' : 'text-yellow-400';
+    const estadoTexto = esGanando ? '🏆 ¡Vas ganando!' : '⚠️ Alguien más pujó más alto';
+
+    /* Calcular fecha de fin */
+    const fechaInicio = new Date(s.fecha_inicio);
+    const fechaFin = new Date(fechaInicio.getTime() + s.duracion_horas * 60 * 60 * 1000);
+
+    cont.innerHTML += `
+      <div class="card p-5 rounded-xl shadow-lg border-2 ${esGanando ? 'border-green-500' : 'border-yellow-500'}">
+        <h2 class="text-2xl font-bold mb-2">${s.titulo}</h2>
+        <p class="text-gray-300 mb-3">${s.descripcion.substring(0, 100)}...</p>
+        
+        <div class="space-y-2 mb-4">
+          <p class="${estadoClase} font-bold">${estadoTexto}</p>
+          <p>Tu puja: <span class="text-white font-semibold">${p.monto}</span></p>
+          <p>Precio actual: <span class="text-cyan-300 font-semibold">${s.precio_actual}</span></p>
+        </div>
+
+        <div class="bg-black/40 p-3 rounded-lg mb-4">
+          <p class="text-sm text-gray-400 mb-1">Tiempo restante:</p>
+          <p id="contador-${s.id}" class="text-lg font-bold"></p>
+        </div>
+
+        <a href="/subastas/${s.id}" 
+           class="block w-full text-center bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-2 rounded-lg transition-all">
+          Ver Subasta
+        </a>
+      </div>
+    `;
+
+    /* Iniciar contador para esta subasta */
+    iniciarContador(s.id, fechaFin);
+  });
+}
+
+/* Cargar todas las subastas */
 async function cargarSubastas() {
-const res = await fetch("/subastas/");
-const data = await res.json();
+  const res = await fetch("/api/subastas");
+  const data = await res.json();
 
+  const cont = document.getElementById("lista-subastas");
+  cont.innerHTML = "";
 
-const cont = document.getElementById("lista-subastas");
-cont.innerHTML = "";
+  if (data.length === 0) {
+    cont.innerHTML = `<p class='text-gray-300'>No hay subastas activas por ahora.</p>`;
+    return;
+  }
 
+  data.forEach(s => {
+    /* Calcular fecha de fin */
+    const fechaInicio = new Date(s.fecha_inicio);
+    const fechaFin = new Date(fechaInicio.getTime() + s.duracion_horas * 60 * 60 * 1000);
 
-if (data.length === 0) {
-cont.innerHTML = `<p class='text-gray-300'>No hay subastas activas por ahora.</p>`;
-return;
+    cont.innerHTML += `
+      <div class="card p-5 rounded-xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-2">${s.titulo}</h2>
+        <p class="text-gray-300 mb-3">${s.descripcion.substring(0, 100)}...</p>
+        <p class="font-semibold mb-3">Precio actual: <span class="text-cyan-300">${s.precio_actual}</span></p>
+        
+        <div class="bg-black/40 p-3 rounded-lg mb-4">
+          <p class="text-sm text-gray-400 mb-1">Tiempo restante:</p>
+          <p id="contador-all-${s.id}" class="text-lg font-bold"></p>
+        </div>
+
+        <a href="/subastas/${s.id}" 
+           class="block w-full text-center bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-2 rounded-lg transition-all">
+          Ver detalles
+        </a>
+      </div>
+    `;
+
+    /* Iniciar contador */
+    iniciarContador(`all-${s.id}`, fechaFin);
+  });
 }
 
-
-data.forEach(s => {
-cont.innerHTML += `
-<div class="card p-5 rounded-xl shadow-lg">
-<h2 class="text-2xl font-bold mb-2">${s.titulo}</h2>
-<p class="text-gray-300">${s.descripcion}</p>
-<p class="mt-4 font-semibold">Precio actual: <span class="text-cyan-300">$${s.precio_actual}</span></p>
-<a href="/subasta/${s.id}" class="mt-4 inline-block bg-cyan-500 hover:bg-cyan-600 text-black font-semibold px-4 py-2 rounded-lg">Ver detalles</a>
-</div>
-`;
+/* Cargar todo al inicio */
+window.addEventListener('DOMContentLoaded', () => {
+  obtenerUsuarioActual();
+  cargarSubastas();
 });
-}
-
-
-cargarSubastas();
 </script>
+
 {% endblock %}

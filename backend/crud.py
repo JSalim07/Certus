@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models import Subasta, Puja, Usuario
 from websocket_manager import notificar_puja
+import auth
 
 
 # ==========================
@@ -20,7 +21,8 @@ def crear_subasta(db: Session, data: dict):
         titulo=data["titulo"],
         descripcion=data["descripcion"],
         precio_inicial=data["precio_inicial"],
-        precio_actual=data["precio_inicial"]
+        precio_actual=data["precio_inicial"],
+        duracion_horas=data.get("duracion_horas", 24)
     )
     db.add(nueva)
     db.commit()
@@ -61,18 +63,97 @@ def crear_puja(db: Session, data: dict):
     return nueva
 
 
+def obtener_pujas_usuario(db: Session, usuario_id: int):
+    """Obtiene todas las pujas de un usuario con info de subastas"""
+    pujas = db.query(Puja).filter(Puja.usuario_id == usuario_id).all()
+    resultado = []
+    
+    for puja in pujas:
+        subasta = obtener_subasta(db, puja.subasta_id)
+        if subasta:
+            resultado.append({
+                "puja_id": puja.id,
+                "monto": puja.monto,
+                "fecha": puja.fecha,
+                "subasta": {
+                    "id": subasta.id,
+                    "titulo": subasta.titulo,
+                    "descripcion": subasta.descripcion,
+                    "precio_actual": subasta.precio_actual,
+                    "fecha_inicio": subasta.fecha_inicio,
+                    "duracion_horas": subasta.duracion_horas
+                }
+            })
+    
+    return resultado
+
+
 # ==========================
 #        USUARIOS
 # ==========================
 
+def obtener_usuario(db: Session, usuario_id: int):
+    """Obtiene un usuario por su ID"""
+    return db.query(Usuario).filter(Usuario.id == usuario_id).first()
+
+
+def obtener_usuario_por_correo(db: Session, correo: str):
+    """Obtiene un usuario por su correo"""
+    return db.query(Usuario).filter(Usuario.correo == correo).first()
+
+
+def crear_usuario(db: Session, data: dict):
+    """Registra un nuevo usuario"""
+    # Verificar si el correo ya existe
+    usuario_existente = obtener_usuario_por_correo(db, data["correo"])
+    if usuario_existente:
+        return {"error": "El correo ya está registrado"}
+    
+    # Encriptar contraseña
+    password_hash = auth.hash_password(data["password"])
+    
+    # Crear usuario
+    nuevo = Usuario(
+        nombre=data["nombre"],
+        correo=data["correo"],
+        password_hash=password_hash
+    )
+    
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    
+    return nuevo
+
+
+def autenticar_usuario(db: Session, correo: str, password: str):
+    """Verifica credenciales y devuelve el usuario si son correctas"""
+    usuario = obtener_usuario_por_correo(db, correo)
+    
+    if not usuario:
+        return None
+    
+    if not auth.verify_password(password, usuario.password_hash):
+        return None
+    
+    return usuario
+
+
 def actualizar_usuario(db: Session, data: dict):
-    usuario = db.query(Usuario).filter(Usuario.id == data["id"]).first()
+    """Actualiza la información de un usuario"""
+    usuario = obtener_usuario(db, data["id"])
 
     if not usuario:
         return {"error": "Usuario no encontrado"}
 
     usuario.nombre = data["nombre"]
-    usuario.correo = data["correo"]
+    
+    # Solo actualizar correo si cambió y no está en uso
+    if data["correo"] != usuario.correo:
+        correo_existente = obtener_usuario_por_correo(db, data["correo"])
+        if correo_existente:
+            return {"error": "El correo ya está en uso"}
+        usuario.correo = data["correo"]
 
     db.commit()
     db.refresh(usuario)

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # ======================
@@ -13,6 +13,7 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(120), nullable=False)
     correo = Column(String(120), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)  # Nueva columna
 
     pujas = relationship("Puja", back_populates="usuario")
 
@@ -33,6 +34,11 @@ class Subasta(Base):
     duracion_horas = Column(Integer, default=24)
 
     pujas = relationship("Puja", back_populates="subasta")
+
+    @property
+    def fecha_fin(self):
+        """Calcula la fecha de finalización"""
+        return self.fecha_inicio + timedelta(hours=self.duracion_horas)
 
 
 # ======================

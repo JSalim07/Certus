@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar Sesión - Certus Auctions</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="min-h-screen flex items-center justify-center">
+
+<!-- FONDO ESPACIAL -->
+<div class="stars"></div>
+<div class="stars2"></div>
+<div class="nebula"></div>
+<div class="cometa"></div>
+<div class="cometa"></div>
+<div class="cometa"></div>
+<div class="estrella-fugaz"></div>
+<div class="estrella-fugaz"></div>
+<div class="estrella-fugaz"></div>
+
+<!-- FORMULARIO DE LOGIN -->
+<div class="card p-10 rounded-2xl max-w-md w-full mx-4 relative z-10">
+  <div class="text-center mb-8">
+    <h1 class="text-4xl font-bold neon mb-2">Certus Auctions</h1>
+    <p class="text-gray-400">Inicia sesión para continuar</p>
+  </div>
+
+  <form id="login-form" class="space-y-6">
+    <div>
+      <label class="block mb-2">Correo Electrónico</label>
+      <input type="email" id="correo" 
+             class="w-full p-3 rounded-lg bg-black/40 border border-white/10 focus:border-cyan-500 focus:outline-none"
+             placeholder="tu@correo.com" required>
+    </div>
+
+    <div>
+      <label class="block mb-2">Contraseña</label>
+      <input type="password" id="password" 
+             class="w-full p-3 rounded-lg bg-black/40 border border-white/10 focus:border-cyan-500 focus:outline-none"
+             placeholder="••••••••" required>
+    </div>
+
+    <button type="submit" 
+            class="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-3 rounded-lg transition-all">
+      🚀 Iniciar Sesión
+    </button>
+  </form>
+
+  <div class="mt-6 text-center">
+    <p class="text-gray-400">
+      ¿No tienes cuenta? 
+      <a href="/registro" class="text-cyan-400 hover:text-cyan-300 font-bold">Regístrate aquí</a>
+    </p>
+  </div>
+
+  <div id="mensaje" class="mt-4 p-3 rounded-lg hidden"></div>
+</div>
+
+<script>
+const form = document.getElementById('login-form');
+const mensaje = document.getElementById('mensaje');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const data = {
+    correo: document.getElementById('correo').value,
+    password: document.getElementById('password').value
+  };
+
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+
+  if (result.error) {
+    mensaje.textContent = '❌ ' + result.error;
+    mensaje.className = 'mt-4 p-3 rounded-lg bg-red-500/20 border border-red-500 text-red-300';
+    mensaje.classList.remove('hidden');
+  } else {
+    /* Guardar token en cookie */
+    document.cookie = `auth_token=${result.token}; path=/; max-age=86400`; // 24 horas
+    
+    mensaje.textContent = '✅ ¡Bienvenido! Redirigiendo...';
+    mensaje.className = 'mt-4 p-3 rounded-lg bg-green-500/20 border border-green-500 text-green-300';
+    mensaje.classList.remove('hidden');
+    
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000);
+  }
+});
+</script>
+
+</body>
+</html>
