@@ -1,0 +1,42 @@
+<!-- subastas.html -->
+{% extends "base.html" %}
+
+{% block title %}Subastas Disponibles{% endblock %}
+
+{% block content %}
+<h1 class="text-4xl font-bold neon mb-8">Subastas Disponibles</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    {% for s in subastas %}
+    <div class="card p-6 rounded-xl shadow-lg border border-white/10 hover:border-cyan-400 transition-all">
+
+        <h2 class="text-2xl font-bold mb-2 text-cyan-300">{{ s.titulo }}</h2>
+
+        <p class="text-gray-300 mb-4">
+            {{ s.descripcion[:150] }}{% if s.descripcion|length > 150 %}...{% endif %}
+        </p>
+
+        <p class="font-semibold mb-4">
+            Precio actual: 
+            <span class="text-cyan-400">$ {{ s.precio_actual }}</span>
+        </p>
+
+        <a href="/subastas/{{ s.id }}"
+           class="block w-full text-center bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-2 rounded-lg transition-all">
+            Ver Detalles
+        </a>
+
+    </div>
+    {% endfor %}
+
+</div>
+
+<!-- Botón para crear nueva subasta -->
+<div class="mt-10 text-center">
+    <a href="/crear" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-black rounded-lg font-bold text-lg transition-all">
+        Crear Nueva Subasta
+    </a>
+</div>
+
+{% endblock %}

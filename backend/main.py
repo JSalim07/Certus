@@ -7,6 +7,7 @@ import crud
 from websocket_manager import conectar
 from fastapi import Request
 
+
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
